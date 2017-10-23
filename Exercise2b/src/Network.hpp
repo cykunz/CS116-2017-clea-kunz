@@ -2,7 +2,6 @@
 #define NETWORK_H
 #include <iostream>
 #include <vector>
-#include <array>
 #include "Neuron.hpp"
 
 using namespace std;
