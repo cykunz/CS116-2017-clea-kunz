@@ -2,7 +2,9 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
-Network::Network(vector<Neuron*> new_neur, int clock, int timestart, int timeend)
+#include <random>
+
+Network::Network(vector<Neuron*> new_neur, unsigned int clock, unsigned int timestart, unsigned int timeend)
 	: neurons_(new_neur), clock_time_(clock), timestart_(timestart), timeend_(timeend)
 {		
 	
@@ -38,7 +40,7 @@ Network::~Network()
 /***************************************************/
 /*	Getters	*/
 
-int Network::getClockTime() const
+unsigned int Network::getClockTime() const
 {	return clock_time_;
 }
 
@@ -46,18 +48,18 @@ vector<Neuron*> Network::getNeurons() const
 {	return neurons_;
 }
 
-int Network::getTimeStart() const
+unsigned int Network::getTimeStart() const
 {	return timestart_;
 }
 
-int Network::getTimeEnd() const
+unsigned int Network::getTimeEnd() const
 {	return timeend_;
 }
 
 /***************************************************/
 /*	Setters	*/
 
-void Network::setClockTime(int const& new_time)
+void Network::setClockTime(unsigned int const& new_time)
 {	clock_time_=new_time;
 }
 
@@ -71,11 +73,11 @@ void Network::setNeurons(vector<Neuron*> const& new_neurons)
 	}
 }
 
-void Network::setTimeStart(int const& new_timestart)
+void Network::setTimeStart(unsigned int const& new_timestart)
 {	timestart_=new_timestart;
 }
 
-void Network::setTimeEnd(int const& new_timeend)
+void Network::setTimeEnd(unsigned int const& new_timeend)
 {	timeend_=new_timeend;
 }
 
@@ -126,9 +128,11 @@ void Network::createLink(vector<Neuron*> neurons_to_link)
 		}
 	}
 }
+
 void Network::update(double const& timeA, double const& timeB)
-{	setClockTime(timeA/dt); /*	Time independent of dt.	*/
-	int end((timeB-timeA)/dt); /*	Number of time steps to do */
+{	
+	setClockTime(timeA/dt); /*	Time independent of dt.	*/
+	unsigned int end(abs((timeB/dt)-getClockTime()));
 	
 	/*	While the clock time is within the interval...	*/
 	while(getClockTime()<end)
@@ -142,7 +146,7 @@ void Network::update(double const& timeA, double const& timeB)
 				
 				/*	If the network neuron spikes, it transmits the signal to each of its linked neurons (if 
 				 * 	it has any).	*/
-				if((NetworkNeuron->update(NetworkNeuron->getInput())) and (!(NetworkNeuron->getLinkedNeurons()).empty()))
+				if((NetworkNeuron->update()) and (!(NetworkNeuron->getLinkedNeurons()).empty()))
 				{	
 					cout<<"Spike at time "<<getClockTime()*dt<<endl;
 					
@@ -150,7 +154,7 @@ void Network::update(double const& timeA, double const& timeB)
 				/*	Iteration in all linked neurons to transmit the signal.	*/
 					for(auto& LinkedNeuron: (NetworkNeuron->getLinkedNeurons()))
 					{	
-						LinkedNeuron->receive(getClockTime()+delay_steps);
+						LinkedNeuron->receive(getClockTime());
 					}
 					
 				}
