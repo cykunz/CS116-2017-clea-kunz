@@ -8,13 +8,15 @@
 using namespace std;
 
 Neuron::Neuron(	double input, vector<Neuron*> linked, vector<double> time, double potential, int spikes, int present, bool refractory,
-				int start, int end, vector<unsigned int> b)
+				vector<unsigned int> b)
 	: 	 input_(input), linked_neurons_(linked), time_(time), membrane_potential_(potential), spikes_(spikes), present_time_(present),
-		is_refractory_(refractory), starttime_(start), endtime_(end), buffer_(b)
+		is_refractory_(refractory), buffer_(b)
 	{		
-		/*	Initializing the buffer with value 0 at every box.	*/
-			for(auto& value: buffer_)
-			{ 	value=0;
+	
+			
+	/*	Initializing the buffer with value 0 at every box.	*/
+			for(size_t i(0);i<delay_steps+1;++i)
+			{ 	buffer_.push_back(0);
 			}
 	}
 Neuron::~Neuron()
@@ -39,12 +41,9 @@ vector<unsigned int> Neuron::getBufferTotal() const
 {	return buffer_;
 }
 
+
 double Neuron::getInput() const
 {	return input_;
-}
-
-int Neuron::getEndTime() const
-{	return endtime_;
 }
 
 double Neuron::getMembranePotential() const
@@ -71,10 +70,6 @@ int Neuron::getSpikes() const
 {	return spikes_;
 }
 
-int Neuron::getStartTime() const
-{	return starttime_;
-}
-
 vector<double> Neuron::getTime() const
 {	return time_;
 }
@@ -88,10 +83,6 @@ void Neuron::setBuffer(int const& idx, int const& new_value)
 
 void Neuron::setInput(double const& input)
 {	input_=input;
-}
-
-void Neuron::setEndTime(int const& timeend)
-{	endtime_=timeend;
 }
 
 void Neuron::setMembranePotential(double const& new_potential)
@@ -108,10 +99,6 @@ void Neuron::setRefractory(bool const& new_refractory)
 
 void Neuron::setSpikes(int const& new_spikes)
 {	spikes_=new_spikes;
-}
-
-void Neuron::setStartTime(int const& starttime)
-{	starttime_=starttime;
 }
 
 void Neuron::setTime(vector<double> const& new_time)
@@ -150,21 +137,21 @@ void Neuron::drawPotential(sf::RenderTarget& target)
 }
 */
 
-double Neuron::MembranePotentialEquation(double const& input, int const& number_spikes) const
+double Neuron::MembranePotentialEquation(double const& input, double const& amplitude) const
 {	
 	/*	Declaration of a variable to facilitate calculations.	*/
-	double e(exp(-dt/(RefractoryPeriod)));
+	double e(exp(-dt/(Tao)));
 	
 	/*	Equation based on the differential equation for the evolution of the neuron's membrane
 	 * 	potential. This time, the number of spikes will play a role in the amount of 
 	 * 	amplitude the linked neuron will receive.	*/
-	return (getMembranePotential()*e)+(input*Resistance*(1-e))+(Amplitude*number_spikes);
+	return (getMembranePotential()*e)+(input*Resistance*(1-e))+(amplitude);
 }
 
-void Neuron::receive(int const& clockanddelay)
+void Neuron::receive(int const& clock)
 {	/*	We set the buffer at idx=present time and delay to the previous value +1 (1 more spike received at 
 		that time.	*/
-	setBuffer(clockanddelay, getBuffer(clockanddelay)+1);
+	setBuffer(clock +delay_steps, getBuffer(clock + delay_steps)+1);
 }
 
 void Neuron::showTimeValues() const
@@ -188,9 +175,9 @@ void Neuron::showTimeValues() const
 }
 
 
-bool Neuron::update(double const& input)
+bool Neuron::update()
 {	ofstream file;
-	double spike_time(0.0);
+	int spike_time(0);
 	
 	/*	Determines if there was a spike or not during this time step.	*/
 	bool spike(false);
@@ -222,11 +209,10 @@ bool Neuron::update(double const& input)
 		 if((getPresentTime()*dt)>=(spike_time*dt)+RefractoryPeriod)
 		 {
 		 setRefractory(false);
-		 //setMembranePotential(MembraneReset);
 		}
 	 } else {
 		 /*	If the neuron isn't refractory, then the membrane potential can be updated.	*/
-		 setMembranePotential(MembranePotentialEquation(input, nspikes));
+		 setMembranePotential(MembranePotentialEquation(getInput(), nspikes*Amplitude));
 	 }
 	 
 	 
@@ -247,14 +233,16 @@ bool Neuron::update(double const& input)
 	 {	cerr<<"File failed to open in Neuron:Buffer."<<endl;
 	 }
 	 assert(!f.fail());
-	 f<<(getPresentTime()%(delay_steps+1))<<" : "<<getBuffer(getPresentTime())<<endl;
+	 f<<"At buffer index of "<<(getPresentTime()%(delay_steps+1))<<" and time "<<getPresentTime()*dt<<" : "<<getBuffer(getPresentTime())<<endl;
 	 f.close();
+	 
+	 	
+	 /*		We reset the buffer at idx=getPresentTime() to 0.	*/
+	 setBuffer(getPresentTime(), 0);
 	 
 	 /*	We add a time step to the present time.	*/
 	 setPresentTime(getPresentTime()+1);
-	
-	 /*		We reset the buffer at idx=getPresentTime() to 0.	*/
-	 //setBuffer(getPresentTime(), 0);
+
 	  
 	 
 	 return spike;
